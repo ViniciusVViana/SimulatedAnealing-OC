@@ -8,16 +8,19 @@ simulatedAnealing.create_matrix()
 initial_solution = [list() * i for i in range(simulatedAnealing.num_prog)]
 
 min_value = []
-for mod in range(simulatedAnealing.num_modules):
-     min_value.append(min(row[mod] for row in simulatedAnealing.prog_hour_cost))
+second_min_value = []
+trans = [list(i) for i in zip(*simulatedAnealing.prog_hour_cost)]
+for row in trans:
+    min_value.append(row.pop(row.index(min(row))))
+    for i in row:
+        if(i == min_value[-1]):
+            row.pop(row.index(i))
+    second_min_value.append(row.pop(row.index(min(row))))
+diff = []
+for i in range(len(min_value)):
+    diff.append(second_min_value[i] - min_value[i])
 
 print(min_value)
-
-""" second_min_value = []
-aux = simulatedAnealing.prog_hour_cost
-for mod in range(simulatedAnealing.num_modules):
-    while True:                                      SOU UM INCOMPETENTE!!!!
-        value = min(row[mod] for row in aux)
-        if(value == min_value[mod]): 
-
-print(value) """
+print(second_min_value)
+print(diff)
+print(initial_solution)

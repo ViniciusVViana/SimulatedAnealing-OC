@@ -57,6 +57,7 @@ class SimulatedAnealing:
     def create_matrix(self):
         self.num_prog = int(self.linhas[0])  # número de programadores
         self.num_modules = int(self.linhas[1])  # número de módulos
+        
         # salvando em uma matriz o custo para realização por cada programador por módulo
         self.cost_modules = []
         for linha in self.linhas[2:self.num_prog+2]:
