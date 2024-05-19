@@ -5,6 +5,9 @@ processed_images
 # Backup files #
 *.bak
 
+# pycache
+__pycache__
+
 # If you are using PyCharm #
 # User-specific stuff
 .idea/**/workspace.xml
