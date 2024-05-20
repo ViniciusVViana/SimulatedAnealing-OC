@@ -29,8 +29,8 @@ FILE_DIR = ROOT_DIR / 'Files'
 
 # criação da classe utilizada para 
 class SimulatedAnealing:
-    def __init__(self, mitigation_factor=None, solution_quantity=None, initial_solution=None, initial_temp=None):
-        self.name = None
+    def __init__(self,name=None, mitigation_factor=None, solution_quantity=None, initial_solution=None, initial_temp=None):
+        self.name = name
         self.linhas = None
         self.num_prog = None
         self.num_modules = None
@@ -44,8 +44,73 @@ class SimulatedAnealing:
         self.prog_hour_max_cost = None
         self.solution_quantity = solution_quantity
 
-        self.dict_prog_modules = {}
-        self.dict_prog_hours = {}
+
+        self.workers = []
+        
+
+    
+    def print_list_dicts(self, list_dict):
+        for i in list_dict:
+            print(f"item {list_dict.index(i)}:")
+            for k, v in i.items():
+                print(f'{k}: {v}')
+                
+    
+    def calc_initial_solution(self):
+        self.initial_solution = [[] for _ in range(self.num_prog)]  # Inicializando o número de listas
+
+        # Vetor para armazenar as diferenças entre a menor e segunda menor tarefa de cada coluna
+        difference_vector = [0] * self.num_modules
+
+        for i in range(self.num_modules):  # Itera sobre as colunas (módulos de tarefas)
+            menor_tarefa = {
+                "min": float('inf'),
+                "prog": None,
+            }
+            segund_menor_tarefa = {
+                "min": float('inf'),
+                "prog": None,
+            }
+
+            for j in range(self.num_prog):  # Itera sobre as linhas (programadores)
+                if self.workers[j]["recurso_por_tarefa"][i] == "*":
+                    continue
+                current_task_cost = self.workers[j]["recurso_por_tarefa"][i]
+
+                if current_task_cost < menor_tarefa["min"]:
+                    segund_menor_tarefa = menor_tarefa.copy()
+                    menor_tarefa = {
+                        "min": current_task_cost,
+                        "prog": j,
+                    }
+                elif current_task_cost < segund_menor_tarefa["min"]:
+                    segund_menor_tarefa = {
+                        "min": current_task_cost,
+                        "prog": j,
+                    }
+
+            # Calcula a diferença entre a menor e segunda menor tarefa da coluna atual
+            difference_vector[i] = menor_tarefa["min"] - segund_menor_tarefa["min"]
+
+            if menor_tarefa["prog"] is not None:
+                if self.workers[menor_tarefa["prog"]]["recurso_atual"] + menor_tarefa["min"] <= self.workers[menor_tarefa["prog"]]["recurso_max"]:
+                    self.workers[menor_tarefa["prog"]]["recurso_atual"] += menor_tarefa["min"]
+                    self.workers[menor_tarefa["prog"]]["tarefas"].append(i)
+                    self.initial_solution[menor_tarefa["prog"]].append(i)
+
+        # Encontra a coluna (módulo) com a maior diferença entre a menor e segunda menor tarefa
+        module_index = difference_vector.index(max(difference_vector))
+        print(f"Módulo com a maior diferença: {module_index}")
+        print("Calculando solução inicial:")
+        self.print_list_dicts(self.workers)
+        print(self.initial_solution)
+
+
+
+
+
+
+
 
     def open_file(self):
         for file in FILE_DIR.iterdir():
@@ -74,19 +139,22 @@ class SimulatedAnealing:
             self.prog_hour_max_cost.append(pHour)
         
         #Criando um dicionario de listas
-        for i in range(self.num_prog):
-            self.dict_prog_modules[f"{i}"] = [self.cost_modules[i][j] for j in range(len(self.cost_modules[i]))]
-            self.dict_prog_hours[f"{i}"] = [self.prog_hour_cost[i][j] for j in range(len(self.prog_hour_cost[i]))]
-
-        print("Custo dos modulos programadores:")
-        for i in range(len(self.dict_prog_hours)):
-            print(i+1,":",self.dict_prog_modules[f"{i}"])
         
-        print("Custo das horas programadores:")
-        for i in range(len(self.dict_prog_hours)):
-            print(i+1,":",self.dict_prog_hours[f"{i}"])
 
-        print("Maximo de horas por programador:",self.prog_hour_max_cost)
+        #Passar a carga horária máxima, recurso por tarefa, custo por tarefa para o dicionário
+        for i in range(self.num_prog):
+            dict_prog = {
+                "custo_por_tarefa": self.cost_modules[i],
+                "recurso_por_tarefa":self.prog_hour_cost[i],
+                "recurso_atual": 0,
+                "recurso_max": self.prog_hour_max_cost[i],
+                "tarefas":[]
+            }
+            self.workers.append(dict_prog)
+        
+        print(self.workers)            
+
+        
         
     def choice_random_neighbors(self, actual_module, actual_prog): #Passando por parametro a tarefa atual e o programador que detém ela 
         random_neighbor = random.choice(self.dict_prog_modules)

@@ -1,1 +1,0 @@
-second_min_value.pop()
