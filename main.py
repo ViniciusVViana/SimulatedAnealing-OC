@@ -20,6 +20,16 @@ diff = []
 for i in range(len(min_value)):
     diff.append(second_min_value[i] - min_value[i])
 
+w = True
+while w:
+    for x in range(len(diff)):
+        if(max(diff) == 0):
+            w = False
+        elif(diff[x] == max(diff)):
+            diff[x] = 0
+            print(diff)
+
+
 print(min_value)
 print(second_min_value)
 print(diff)

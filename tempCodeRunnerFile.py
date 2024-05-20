@@ -1,1 +1,1 @@
-second_min_value.pop()
+for x in range(len(diff)):
