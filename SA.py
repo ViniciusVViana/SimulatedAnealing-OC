@@ -65,7 +65,7 @@ class SimulatedAnealing:
         # Vetor para armazenar as diferenças entre a menor e segunda menor tarefa de cada coluna
         difference_vector = [0] * self.num_modules
         trans = [list(i) for i in zip(*[self.workers[j]["recurso_por_tarefa"] for j in range(len(self.workers))])]
-        print(trans)
+
         micro_poggers_diff = {
             "difference_vector":[],
             "index_vector":[]
@@ -73,16 +73,7 @@ class SimulatedAnealing:
 
         for i in range(len(trans)):  # Itera sobre as colunas (módulos de tarefas)
             vet_prog_aux = sorted(trans[i], key=lambda x: x) 
-            
-            menor_tarefa = {
-                "min": float('inf'),
-                "prog": None,
-            }
-            second_minor_value = {
-                "min": float('inf'),
-                "prog": None,
-            }
-            #print(f"Programador {i+1}:", self.workers[i]["recurso_por_tarefa"])
+
             #Pegar o menor de cada lista
             min = vet_prog_aux[0]
             second_min_values = float('inf')
@@ -91,13 +82,48 @@ class SimulatedAnealing:
                 if min == vet_prog_aux[cont]:
                     cont += 1
                 else:
-                   second_min_values = vet_prog_aux[cont] 
+                    second_min_values = vet_prog_aux[cont] 
             micro_poggers_diff["difference_vector"].append(second_min_values - min)  # TODO: Escolher um nome melhor!
             micro_poggers_diff["index_vector"].append(self.find_in_vet(trans[i], min))
-            
-        #
 
-        print(micro_poggers_diff)
+        # 1. Classificar micro_poggers_diff["difference_vector"] em ordem decrescente, mantendo os índices correspondentes em micro_poggers_diff["index_vector"].
+        sorted_indices = [i for i, _ in sorted(enumerate(micro_poggers_diff["difference_vector"]), key=lambda x: x[1], reverse=True)]
+
+        # 2. Iterar sobre micro_poggers_diff["difference_vector"] e micro_poggers_diff["index_vector"] simultaneamente.
+        for i in sorted_indices:
+            task_index = micro_poggers_diff["index_vector"][i]
+            task_value = micro_poggers_diff["difference_vector"][i]
+
+            # 3. Para cada índice em micro_poggers_diff["index_vector"], atribuir a tarefa correspondente ao programador com a menor carga de trabalho atual que ainda pode aceitar a tarefa sem ultrapassar seu recurso_max.
+            for worker in sorted(self.workers, key=lambda x: x["recurso_atual"]):
+                if worker["recurso_max"] - worker["recurso_atual"] >= task_value:
+                    worker["recurso_max"] -= task_value
+                    worker["recurso_atual"] += task_value
+                    self.initial_solution[worker["id"]].append(task_index)
+                    break  # A tarefa foi atribuída, então podemos sair do loop interno.
+
+        # 4. Remover tarefas já atribuídas de micro_poggers_diff["index_vector"] para evitar a atribuição da mesma tarefa a vários programadores.
+        for worker in self.workers:
+            for task in worker["tarefas"]:
+                if task in micro_poggers_diff["index_vector"]:
+                    micro_poggers_diff["index_vector"].remove(task)
+
+        
+        auxSolution = []
+        for i in range(len(self.initial_solution)):
+            auxSolution.append([trans[i][j] for j in self.initial_solution[i]])
+        
+        self.initial_solution = auxSolution
+        #Agora com a real solução inicial, arrumar as tarefas para cada programador e o recurso utilizado
+        for i in range(len(self.initial_solution)):
+            for j in range(len(self.initial_solution[i])):
+                self.workers[i]["tarefas"].append(self.initial_solution[i][j])
+                #self.workers[i]["recurso_atual"] += self.workers[i]["recurso_por_tarefa"][self.initial_solution[i][j]]                
+        #Erros: auxSolution tá distribuindo errado as tarefas e o recurso_atual também está incorreto
+        
+        self.print_list_dicts(self.workers)
+
+        print(auxSolution)
 
     def open_file(self):
         print("Arquivos: ")
@@ -135,6 +161,7 @@ class SimulatedAnealing:
         #Passar a carga horária máxima, recurso por tarefa, custo por tarefa para o dicionário
         for i in range(self.num_prog):
             dict_prog = {
+                "id":i,
                 "custo_por_tarefa": self.cost_modules[i],
                 "recurso_por_tarefa":self.prog_hour_cost[i],
                 "recurso_atual": 0,
