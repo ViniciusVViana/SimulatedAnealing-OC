@@ -44,16 +44,19 @@ class SimulatedAnealing:
         self.prog_hour_max_cost = None
         self.solution_quantity = solution_quantity
 
-
         self.workers = []
         
-
-    
     def print_list_dicts(self, list_dict):
         for i in list_dict:
             print(f"item {list_dict.index(i)}:")
             for k, v in i.items():
                 print(f'{k}: {v}')
+                
+    def find_in_vet(self, vet, value):
+        for i in range(len(vet)):
+            if vet[i] == value:
+                return i
+        return -1
                 
     
     def calc_initial_solution(self):
@@ -61,63 +64,51 @@ class SimulatedAnealing:
 
         # Vetor para armazenar as diferenças entre a menor e segunda menor tarefa de cada coluna
         difference_vector = [0] * self.num_modules
+        trans = [list(i) for i in zip(*[self.workers[j]["recurso_por_tarefa"] for j in range(len(self.workers))])]
+        print(trans)
+        micro_poggers_diff = {
+            "difference_vector":[],
+            "index_vector":[]
+        }
 
-        for i in range(self.num_modules):  # Itera sobre as colunas (módulos de tarefas)
+        for i in range(len(trans)):  # Itera sobre as colunas (módulos de tarefas)
+            vet_prog_aux = sorted(trans[i], key=lambda x: x) 
+            
             menor_tarefa = {
                 "min": float('inf'),
                 "prog": None,
             }
-            segund_menor_tarefa = {
+            second_minor_value = {
                 "min": float('inf'),
                 "prog": None,
             }
+            #print(f"Programador {i+1}:", self.workers[i]["recurso_por_tarefa"])
+            #Pegar o menor de cada lista
+            min = vet_prog_aux[0]
+            second_min_values = float('inf')
+            cont = 1
+            for j in range (len(vet_prog_aux) - 1):
+                if min == vet_prog_aux[cont]:
+                    cont += 1
+                else:
+                   second_min_values = vet_prog_aux[cont] 
+            micro_poggers_diff["difference_vector"].append(second_min_values - min)  # TODO: Escolher um nome melhor!
+            micro_poggers_diff["index_vector"].append(self.find_in_vet(trans[i], min))
+            
+        #
 
-            for j in range(self.num_prog):  # Itera sobre as linhas (programadores)
-                if self.workers[j]["recurso_por_tarefa"][i] == "*":
-                    continue
-                current_task_cost = self.workers[j]["recurso_por_tarefa"][i]
-
-                if current_task_cost < menor_tarefa["min"]:
-                    segund_menor_tarefa = menor_tarefa.copy()
-                    menor_tarefa = {
-                        "min": current_task_cost,
-                        "prog": j,
-                    }
-                elif current_task_cost < segund_menor_tarefa["min"]:
-                    segund_menor_tarefa = {
-                        "min": current_task_cost,
-                        "prog": j,
-                    }
-
-            # Calcula a diferença entre a menor e segunda menor tarefa da coluna atual
-            difference_vector[i] = menor_tarefa["min"] - segund_menor_tarefa["min"]
-
-            if menor_tarefa["prog"] is not None:
-                if self.workers[menor_tarefa["prog"]]["recurso_atual"] + menor_tarefa["min"] <= self.workers[menor_tarefa["prog"]]["recurso_max"]:
-                    self.workers[menor_tarefa["prog"]]["recurso_atual"] += menor_tarefa["min"]
-                    self.workers[menor_tarefa["prog"]]["tarefas"].append(i)
-                    self.initial_solution[menor_tarefa["prog"]].append(i)
-
-        # Encontra a coluna (módulo) com a maior diferença entre a menor e segunda menor tarefa
-        module_index = difference_vector.index(max(difference_vector))
-        print(f"Módulo com a maior diferença: {module_index}")
-        print("Calculando solução inicial:")
-        self.print_list_dicts(self.workers)
-        print(self.initial_solution)
-
-
-
-
-
-
-
+        print(micro_poggers_diff)
 
     def open_file(self):
+        print("Arquivos: ")
         for file in FILE_DIR.iterdir():
             if file.suffix == '.txt':
                 self.name = file.stem
-                with open(file, "r") as arquivo:
-                    self.linhas = arquivo.readlines()
+                print(f"{file.stem}")
+        open_file = input("Escolha o arquivo que deseja abrir: ")
+        open_file += ".txt"
+        with open(f'{FILE_DIR}\\{open_file}', "r") as arquivo:
+            self.linhas = arquivo.readlines()
 
     def create_matrix(self):
         self.num_prog = int(self.linhas[0])  # número de programadores
@@ -152,10 +143,8 @@ class SimulatedAnealing:
             }
             self.workers.append(dict_prog)
         
-        print(self.workers)            
+        #print(self.workers)            
 
-        
-        
     def choice_random_neighbors(self, actual_module, actual_prog): #Passando por parametro a tarefa atual e o programador que detém ela 
         random_neighbor = random.choice(self.dict_prog_modules)
         
