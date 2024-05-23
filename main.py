@@ -5,6 +5,7 @@ simulatedAnealing = SimulatedAnealing()
 simulatedAnealing.open_file()
 simulatedAnealing.create_matrix()
 simulatedAnealing.calc_initial_solution()
+simulatedAnealing.search_neighbors()
 
 """ initial_solution = [list() * i for i in range(simulatedAnealing.num_prog)]
 
@@ -33,5 +34,4 @@ while w:
 
 print(min_value)
 print(second_min_value)
-print(diff)
-print(initial_solution) """
+print(diff)"""

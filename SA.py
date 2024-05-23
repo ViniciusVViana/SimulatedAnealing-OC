@@ -35,7 +35,7 @@ class SimulatedAnealing:
         self.num_prog = None
         self.num_modules = None
         self.temperature = None
-        self.initial_solution = initial_solution
+        self.solution = initial_solution
         self.initial_temp = initial_temp
         
         self.cost_modules = None
@@ -72,10 +72,10 @@ class SimulatedAnealing:
         return difference_vector
             
     def calc_initial_solution(self):
-        self.initial_solution = [[{
+        self.solution = [{
             "tasks":[],
             "worker_id":None
-        }] for _ in range(self.num_prog)]  # Inicializando o número de listas
+        } for _ in range(self.num_prog)]  # Inicializando o número de listas
         solution_cost = 0
         # Vetor para armazenar as diferenças entre a menor e segunda menor tarefa de cada coluna
         difference_vector = sorted(self.regret(), key=lambda x: x["difference"], reverse=True)     
@@ -100,8 +100,8 @@ class SimulatedAnealing:
             if self.workers[worker_id]["recurso_atual"] + self.workers[worker_id]["recurso_por_tarefa"][module_id] <= self.workers[worker_id]["recurso_max"]:
                 self.workers[worker_id]["recurso_atual"] += self.workers[worker_id]["recurso_por_tarefa"][module_id]
                 self.workers[worker_id]["tarefas"].append(module_id)
-                self.initial_solution[worker_id][0]["tasks"].append(module_id)
-                self.initial_solution[worker_id][0]["worker_id"] = worker_id
+                self.solution[worker_id]["tasks"].append(module_id)
+                self.solution[worker_id]["worker_id"] = worker_id
                 solution_cost += self.workers[worker_id]["custo_por_tarefa"][module_id]
             else:
                 penalty = 1
@@ -109,37 +109,90 @@ class SimulatedAnealing:
                     if self.workers[j]["recurso_atual"] + self.workers[j]["recurso_por_tarefa"][module_id] <= self.workers[j]["recurso_max"]:
                         self.workers[j]["recurso_atual"] += self.workers[j]["recurso_por_tarefa"][module_id]
                         self.workers[j]["tarefas"].append(module_id)
-                        self.initial_solution[j][0]["tasks"].append(module_id)
-                        self.initial_solution[j][0]["worker_id"] = j
+                        self.solution[j]["tasks"].append(module_id)
+                        self.solution[j]["worker_id"] = j
                         solution_cost += self.workers[j]["custo_por_tarefa"][module_id]
                         break
             solution_cost += self.workers[j]["custo_por_tarefa"][module_id]
         
         print("Trabalhadores: ")
-        self.print_list_dicts(self.workers)
-        print(f"Solution cost: {solution_cost}")
-        print(self.initial_solution)
-        print(difference_vector)
+        #self.print_list_dicts(self.workers)
+        #print(f"Solution cost: {solution_cost}") 
+        print(self.solution)
+        """ print(difference_vector) """
         
         return solution_cost
 
         #self.print_list_dicts(self.workers)
     
         
-    def procurar_vizinhos(self, solution:list):
+    def search_neighbors(self):
+
         #Vetor para armazenar os vizinhos
         neighbors = []
-        
-        
-        random_worker = random.randint(0, self.num_prog)
-        aux_worker = self.workers[random_worker]
-        self.workers.pop(random_worker)
+        #Quantidade de vizinhos a serem gerados, 15% do número de programadores arrendondado para cima
+        quant_neighbors = math.ceil(self.num_prog * 0.15)
 
+        for i in range(quant_neighbors):
+            #Escolher um trabalhador aleatório para ceder tarefas
+            random_worker_send = random.choice(self.workers)
+            #Escolher um trabalhador aleatório para receber tarefas
+            random_worker_receive = random.choice(self.workers)
+
+            #Verificar se o trabalhador escolhido é o mesmo que o atual ou o programador escolhido não tem tarefas
+            # Supondo que random_worker é uma lista de dicionários
+            while random_worker_send == self.solution[0]["worker_id"] or len(random_worker_send["tarefas"]) == 0:
+                random_worker_send = random.choice(self.workers)
+
+            #Verificar se o trabalhador escolhido é o mesmo que o atual ou o programador escolhido não tem tarefas
+            # Supondo que random_worker é uma lista de dicionários
+            while random_worker_receive == self.solution[0]["worker_id"] or len(random_worker_receive["tarefas"]) == 0:
+                random_worker_receive = random.choice(self.workers)
+
+            #Escolher uma tarefa aleatória do trabalhador que cederá a tarefa
+            random_module_send = random.choice(random_worker_send["tarefas"])
+
+            #Escolher uma tarefa aleatória do trabalhador que receberá a tarefa
+            random_module_receive = random.choice(random_worker_receive["tarefas"])
+
+            #Trocar as tarefas entre os trabalhadores
+
+            #Verificar se o trabalhador escolhido é o mesmo que o atual ou o programador escolhido não tem tarefas
+            # Supondo que random_worker é uma lista de dicionários
+        #     while random_worker_send == self.solution[0]["worker_id"] or len(random_worker_send["tarefas"]) == 0:
+        #         random_worker_send = random.choice(self.workers)
+
+        #     #Escolher uma tarefa aleatória do trabalhador escolhido
+        #     random_module = random.choice(self.workers[random_worker["id"]]["tarefas"])
+
+        #     #Escolher uma tarefa aleatória do trabalhador atual
+        #     random_module_actual = random.choice(self.solution[0]["tasks"])
+
+        #     #Trocar as tarefas entre os trabalhadores
+        #     self.solution[0]["tasks"].remove(random_module_actual)
+        #     self.solution[0]["tasks"].append(random_module)
+        #     random_worker["tarefas"].remove(random_module)
+        #     random_worker["tarefas"].append(random_module_actual)
+
+        #     #Calcular o custo da nova solução
+        #     solution_cost = 0
+        #     for i in range(self.num_modules):
+        #         if i in self.solution[0]["tasks"]:
+        #             solution_cost += self.workers[self.solution[0]["worker_id"]]["custo_por_tarefa"][i]
+        #         elif i in random_worker["tarefas"]:
+        #             solution_cost += self.workers[random_worker["id"]]["custo_por_tarefa"][i]
+
+        #     #Adicionar a nova solução ao vetor de vizinhos
+        #     neighbors.append({
+        #         "tasks":self.solution[0]["tasks"],
+        #         "worker_id":self.solution[0]["worker_id"],
+        #         "cost":solution_cost
+        #     })
+        # print("vizinhos")
+        # print(neighbors)
         
-        random_module = random.choice(self.workers[random_worker]["tarefas"])
-        
-        change_module = self.initial_solution[random_worker]["tasks"]
-        print(change_module)
+        return neighbors
+
         
         
         
