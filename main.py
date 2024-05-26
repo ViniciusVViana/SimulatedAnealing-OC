@@ -4,8 +4,7 @@ import random
 simulatedAnealing = SimulatedAnealing()
 simulatedAnealing.open_file()
 simulatedAnealing.create_matrix()
-simulatedAnealing.calc_initial_solution()
-simulatedAnealing.search_neighbors()
+simulatedAnealing.simulated_annealing()
 
 """ initial_solution = [list() * i for i in range(simulatedAnealing.num_prog)]
 
