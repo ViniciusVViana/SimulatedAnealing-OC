@@ -31,7 +31,7 @@ FILE_DIR = ROOT_DIR / 'Files'
 
 # criação da classe utilizada para 
 class SimulatedAnealing:
-    def __init__(self,name=None, mitigation_factor=0.9, solution_quantity=None, initial_solution=None, initial_temp = None, penalty=3):
+    def __init__(self,name=None, mitigation_factor=0.99, solution_quantity=None, initial_solution=None, initial_temp = None, penalty=3):
         self.name = name
         self.linhas = None
         self.num_prog = None
@@ -66,9 +66,9 @@ class SimulatedAnealing:
         print("Arquivos: ")
         for file in FILE_DIR.iterdir():
             if file.suffix == '.txt':
-                self.name = file.stem
                 print(f"{file.stem}")
         open_file = input("Escolha o arquivo que deseja abrir: ")
+        self.name = open_file.upper()
         open_file += ".txt"
         with open(f'{FILE_DIR}\\{open_file}', "r") as arquivo:
             self.linhas = arquivo.readlines()
@@ -167,11 +167,9 @@ class SimulatedAnealing:
            
             
 
-        print("Trabaio: ")
         #self.print_list_dicts(self.workers)
         #print(f"Solution cost: {solution_cost}") 
-        print(self.solution)
-        """ print(difference_vector) """
+
         
         return solution_cost
 
@@ -215,7 +213,6 @@ class SimulatedAnealing:
             for i in range(self.num_prog):
                 for j in self.solution[i]["tasks"]:
                     if(self.workers[worker_receive_id]["recurso_atual"] > self.workers[worker_receive_id]["recurso_max"]):
-                        #print("PENALIDADEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE")
                         new_cost += self.workers[i]["custo_por_tarefa"][j] + (self.workers[worker_receive_id]["recurso_atual"] - self.workers[worker_receive_id]["recurso_max"]) * self.penalty
                     else:
                         new_cost += self.workers[i]["custo_por_tarefa"][j]
@@ -223,7 +220,6 @@ class SimulatedAnealing:
             
             neighbors.append({
                 "solution": self.solution,
-                
                 "cost": new_cost
             })
         return neighbors
@@ -232,60 +228,108 @@ class SimulatedAnealing:
     def simulated_annealing(self):
         actual_cost = self.calc_initial_solution()
         
+        
         print("Custo inicial: " + str(actual_cost))
         if self.temperature is None:
             #Calculo da temperatura inicial se baseia em procurar num_prog -1 vizinhos e calcualr uma media entre as soluções após as trocas
             soma = 0
             for i in range(self.num_prog - 1):
                 neighbors = self.search_neighbors()
-                print("Solução: " + str(i+1))
-                print(neighbors[0]["cost"])
-
+                #print("Vizinho: " + str(i+1))
+               # print(neighbors)
                 soma += neighbors[0]["cost"]
             
         #Inicializar a solução atual
         actual_solution = self.solution
+        best_soluction = {
+            "solution": actual_solution,
+            "cost": actual_cost
+        }
         #Inicializar o custo da solução atual
         print("Solução inicial: ")
         print(actual_solution)
         
         self.temperature = soma / (self.num_prog - 1)
-        cost_vector = [{
-            "cost": actual_cost,
-            "temperature": self.temperature,
+        all_solutions_vector = [{
+            "iteration": 0,
+            "cost": actual_cost
+        }]
+
+        best_solutions_vector = [
+            {
+                "iteration": 0,
+                "cost": actual_cost
+            }
+        ]
+        temperature_vector = [{
+            "iteration": 0,
+            "temperature": self.temperature
+        
         }]
         
         print("Temperatura inicial: " + str(self.temperature))
+        cont = 0
         
         #Enquanto a temperatura for maior que 1
         while self.temperature > 1:
+            cont += 1
             #Vizinhos
             neighbors = self.search_neighbors()
             #Escolher um vizinho aleatório
             random_neighbor = random.choice(neighbors)
             #Calcular a variação do custo
             actual_variation = random_neighbor["cost"] - actual_cost
+            #salvar todas as soluções
+           
             #Se a variação for menor que 0, a solução é aceita
             if actual_variation < 0:
                 actual_cost = random_neighbor["cost"]
                 actual_solution = random_neighbor["solution"]
+                if actual_cost < best_soluction["cost"]:
+                    best_soluction["cost"] = actual_cost
+                    best_soluction["solution"] = actual_solution
+                    
+                    best_solutions_vector.append({
+                        "iteration": cont,
+                        "cost": actual_cost
+                    })
+
+                
+                
+              
             else:
                 #Se a variação for maior que 0, a solução é aceita com uma probabilidade
                 probability = self.acceptance_probability(actual_variation, self.temperature)
                 if random.random() < probability:
                     actual_cost = random_neighbor["cost"]
                     actual_solution = random_neighbor["solution"]
+                    
+            if best_solutions_vector[cont-1]["iteration"] != cont:
+                best_solutions_vector.append({
+                    "iteration": cont,
+                    "cost": best_soluction["cost"]
+                })
+            if all_solutions_vector[cont-1]["iteration"] != cont:
+                all_solutions_vector.append({
+                    "iteration": cont,
+                    "cost": actual_cost
+                })
+
+
+            temperature_vector.append({
+                "iteration": cont,
+                "temperature": self.temperature
+            })
             #Reduzir a temperatura
             self.reduct_temperature(self.temperature)
-            cost_vector.append({
-                "cost": actual_cost,
-                "temperature": self.temperature,
-            })
+            
         
         print("Solução final: ")
-        print(actual_solution)
-        print("Custo final: " + str(actual_cost))
-        self.plot2d(cost_vector)
+        print(best_soluction["solution"])
+        print("Custo final: ",best_soluction["cost"])
+        self.plot2d(temperature_vector, all_solutions_vector, best_solutions_vector)
+        
+        
         
         
         
@@ -298,17 +342,30 @@ class SimulatedAnealing:
         temperature = math.e ** (-(actual_variation/actual_temperature))
         return temperature
     
-    def plot2d(self, cost_vector):
-        x = []
-        y = []
-        for i in cost_vector:
-            x.append(i["temperature"])
-            y.append(i["cost"])
-            
-        plt.plot(x, y, )
-        plt.xlabel("Temperatura")
-        plt.ylabel("Custo")
-        plt.gca().invert_xaxis()  # Inverte o eixo y
+    def plot2d(self, vet_temp, vet_cost, vet_best_cost):
+        # Preparar os dados
+        x1 = [item['iteration'] for item in vet_best_cost]
+        y1 = [item['cost'] for item in vet_best_cost]
+
+        x2 = [item['iteration'] for item in vet_cost]
+        y2 = [item['cost'] for item in vet_cost]
+
+        x3 = [item['iteration'] for item in vet_temp]
+        y3 = [item['temperature'] for item in vet_temp]
+
+        # Plotar os dados
+        plt.plot(x1, y1, label='Melhor Solução')
+        plt.plot(x2, y2, label='Todas as Soluções')
+        plt.plot(x3, y3, label='Temperatura')
+
+        # Configurar o gráfico
+        plt.xlabel('Iteração')
+        plt.ylabel('Valor')
+        plt.title(f'{self.name} - Simulated Anealing')
+        plt.legend()
+
+        # Mostrar o gráfico
         plt.show()
+        
     
     
