@@ -28,7 +28,6 @@ import matplotlib.pyplot as plt
 ROOT_DIR = Path(__file__).parent
 FILE_DIR = ROOT_DIR / 'Files'
 
-
 # criação da classe utilizada para 
 class SimulatedAnealing:
     def __init__(self,name=None, mitigation_factor=0.99, solution_quantity=None, initial_solution=None, initial_temp = None, penalty=3):
@@ -61,7 +60,7 @@ class SimulatedAnealing:
                 return i
         return -1     
         
-    
+    # Função para abrir o arquivo
     def open_file(self):
         print("Arquivos: ")
         for file in FILE_DIR.iterdir():
@@ -93,8 +92,6 @@ class SimulatedAnealing:
             self.prog_hour_max_cost.append(pHour)
         
         #Criando um dicionario de listas
-        
-
         #Passar a carga horária máxima, recurso por tarefa, custo por tarefa para o dicionário
         for i in range(self.num_prog):
             dict_prog = {
@@ -157,6 +154,7 @@ class SimulatedAnealing:
                 solution_cost += self.workers[worker_id]["custo_por_tarefa"][module_id]
             else:
                 for j in range(self.num_prog):
+                    # Se o recurso atual for maior que o recurso maximo, aplicar a penalidade
                     if self.workers[j]["recurso_atual"] + self.workers[j]["recurso_por_tarefa"][module_id] <= self.workers[j]["recurso_max"]:
                         self.workers[j]["recurso_atual"] += self.workers[j]["recurso_por_tarefa"][module_id]
                         self.workers[j]["tarefas"].append(module_id)
@@ -164,18 +162,15 @@ class SimulatedAnealing:
                         self.solution[j]["worker_id"] = j
                         solution_cost += self.workers[j]["custo_por_tarefa"][module_id]
                         break
-           
-            
 
         #self.print_list_dicts(self.workers)
         #print(f"Solution cost: {solution_cost}") 
-
         
         return solution_cost
 
         #self.print_list_dicts(self.workers)
     
-        
+    # Função para buscar os vizinhos
     def search_neighbors(self):
         neighbors = []
         new_cost = 0
@@ -207,27 +202,25 @@ class SimulatedAnealing:
             if(self.workers[worker_receive_id]["recurso_atual"] > self.workers[worker_receive_id]["recurso_max"]):
                 #o recurso do programador atual recebe o excedente vezes a penalidade
                 self.workers[worker_receive_id]["recurso_atual"] += (self.workers[worker_receive_id]["recurso_atual"] - self.workers[worker_receive_id]["recurso_max"]) * self.penalty
-                
-                    
+                         
             #calcular o novo custo
             for i in range(self.num_prog):
                 for j in self.solution[i]["tasks"]:
+                    # Se o recurso atual for maior que o recurso maximo, aplicar a penalidade
                     if(self.workers[worker_receive_id]["recurso_atual"] > self.workers[worker_receive_id]["recurso_max"]):
                         new_cost += self.workers[i]["custo_por_tarefa"][j] + (self.workers[worker_receive_id]["recurso_atual"] - self.workers[worker_receive_id]["recurso_max"]) * self.penalty
                     else:
                         new_cost += self.workers[i]["custo_por_tarefa"][j]
-                    
-            
+
             neighbors.append({
                 "solution": self.solution,
                 "cost": new_cost
             })
         return neighbors
             
-
+    #   Função para executar o algoritmo de simulated annealing
     def simulated_annealing(self):
         actual_cost = self.calc_initial_solution()
-        
         
         print("Custo inicial: " + str(actual_cost))
         if self.temperature is None:
@@ -283,39 +276,42 @@ class SimulatedAnealing:
            
             #Se a variação for menor que 0, a solução é aceita
             if actual_variation < 0:
+                # Atualizar o custo da solução atual
                 actual_cost = random_neighbor["cost"]
                 actual_solution = random_neighbor["solution"]
+                # Se o custo da solução atual for menor que o melhor custo, atualizar o melhor custo
                 if actual_cost < best_soluction["cost"]:
                     best_soluction["cost"] = actual_cost
                     best_soluction["solution"] = actual_solution
                     
+                    # Salvar a melhor solução
                     best_solutions_vector.append({
                         "iteration": cont,
                         "cost": actual_cost
                     })
 
-                
-                
-              
             else:
                 #Se a variação for maior que 0, a solução é aceita com uma probabilidade
                 probability = self.acceptance_probability(actual_variation, self.temperature)
                 if random.random() < probability:
                     actual_cost = random_neighbor["cost"]
                     actual_solution = random_neighbor["solution"]
-                    
+            
+            # Salvar a solução atual
             if best_solutions_vector[cont-1]["iteration"] != cont:
                 best_solutions_vector.append({
                     "iteration": cont,
                     "cost": best_soluction["cost"]
                 })
+
+            # Salvar a solução atual
             if all_solutions_vector[cont-1]["iteration"] != cont:
                 all_solutions_vector.append({
                     "iteration": cont,
                     "cost": actual_cost
                 })
 
-
+            # Salvar a temperatura
             temperature_vector.append({
                 "iteration": cont,
                 "temperature": self.temperature
@@ -323,25 +319,22 @@ class SimulatedAnealing:
             #Reduzir a temperatura
             self.reduct_temperature(self.temperature)
             
-        
         print("Solução final: ")
         print(best_soluction["solution"])
         print("Custo final: ",best_soluction["cost"])
         self.plot2d(temperature_vector, all_solutions_vector, best_solutions_vector)
         
-        
-        
-        
-        
-        
+    # Função para reduzir a temperatura
     def reduct_temperature(self,old_temperature):
         self.temperature = self.mitigation_factor * old_temperature
     
+    # Função para calcular a probabilidade de aceitação
     def acceptance_probability(self, actual_variation, actual_temperature):
         #∆E=E(i+1) − Ei=100 − 85= 15
         temperature = math.e ** (-(actual_variation/actual_temperature))
         return temperature
     
+    # Função para plotar o gráfico
     def plot2d(self, vet_temp, vet_cost, vet_best_cost):
         # Preparar os dados
         x1 = [item['iteration'] for item in vet_best_cost]
@@ -366,6 +359,3 @@ class SimulatedAnealing:
 
         # Mostrar o gráfico
         plt.show()
-        
-    
-    
